@@ -36,6 +36,6 @@ if __name__ == '__main__':
     DB_NAME = 'english_bot_db'
     USER = 'postgres'
     PASSWORD = 'postgres'
-    TOKEN =  '7076512254:AAHwldFRsqwr3rAdEiCEOmSF-zoFFIjFtO4'
+    TOKEN = '1111111111:AAAaaaAAaaaa1aAaAaAAAaAA-aaAAAaAa11'
     
     main_function(DB_NAME, USER, PASSWORD, TOKEN)
