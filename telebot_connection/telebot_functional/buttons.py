@@ -1,10 +1,7 @@
-import os
-import sys
 import random
 
 from telebot import types
 
-sys.path.insert(1, os.path.join(os.path.abspath(os.getcwd())))
 from telebot_connection.telebot_functional.cmd_state import Command
 
 
