@@ -44,12 +44,11 @@ def main_function(db_name: str, user: str, password: str,
     print('# ПОДКЛЮЧЕНИЕ К ЧАТ-БОТУ...')
 
     repository = Repository(dbname=db_name, user=user, password=password)
-
     connect_telebot(repository, token)
 
 
 if __name__ == '__main__':
-    DB_NAME = 'test_telebot'
+    DB_NAME = 'test_TGbot'
     USER = 'postgres'
     PASSWORD = 'postgres'
     TOKEN = ''

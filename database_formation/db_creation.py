@@ -1,4 +1,5 @@
 import csv
+import os
 
 import sqlalchemy as sq
 from psycopg2 import errors
@@ -6,7 +7,6 @@ from sqlalchemy import create_engine, exc
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
 
-from data_formation.english_html import write_dir
 from database_formation.table_structure import get_table_list, form_tables, Pos, Words
 
 
@@ -18,6 +18,18 @@ class Database:
         self.password = password
         self.host = host
         self.port = port
+
+    def write_dir(self, *args) -> os.path:
+        abspath = os.path.abspath(args[0])
+        root_dir = ''
+
+        for arg in args[1:]:
+            if root_dir:
+                root_dir = os.path.join(root_dir, arg)
+            else:
+                root_dir = os.path.join(abspath, arg)
+
+        return root_dir
 
     def get_engine(self):
         dns_link = f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.dbname}"
@@ -77,7 +89,7 @@ class Database:
             return pos_list
 
     def prepare_words(self):
-        csv_path = write_dir('data', 'database_csv', 'database.csv')
+        csv_path = self.write_dir('data', 'database_csv', 'database.csv')
         csv_path = csv_path.replace('database_formation/', '')
         with (open(csv_path) as f):
             csv_reader = csv.reader(f)

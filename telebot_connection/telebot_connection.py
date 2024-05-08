@@ -1,23 +1,40 @@
 import requests
-import telebot
 from telebot import types, TeleBot, custom_filters
+from telebot.asyncio_handler_backends import StatesGroup, State
 from telebot.storage import StateMemoryStorage
-
-from telebot_connection.telebot_functional.audio import get_mp3_audio
-from telebot_connection.telebot_functional.example import get_example
-from telebot_connection.telebot_functional.buttons import setup_buttons
-from telebot_connection.telebot_functional.words import get_random_words
-from telebot_connection.telebot_functional.words import get_random_pos_database
-from telebot_connection.telebot_functional.cmd_state import Command, States
-from telebot_connection.telebot_functional.cmd_state import get_button_states
-from telebot_connection.telebot_functional.text import show_hint, show_target
-# from telebot_connection.telebot_functional.known_users import check_known_users
-from telebot_connection.telebot_functional.letters import check_word_letters
-from telebot_connection.telebot_functional.add_word import get_word_info, count_words
-# from telebot_connection.telebot_functional.add_word import count_words
-from telebot_connection.telebot_functional.text import hello_text
-
+from telebot_connection.telebot_functions import TelebotFunctional
 from database_formation.table_filling import Repository
+
+
+
+# from telebot_connection.telebot_functional.audio import get_mp3_audio
+# from telebot_connection.telebot_functional.example import get_example
+# from telebot_connection.telebot_functional.buttons import setup_buttons
+# from telebot_connection.telebot_functional.words import get_random_words
+# from telebot_connection.telebot_functional.words import get_random_pos_database
+# from telebot_connection.telebot_functional.cmd_state import Command, States
+# from telebot_connection.telebot_functional.cmd_state import get_button_states
+# from telebot_connection.telebot_functional.text import show_hint, show_target
+# # from telebot_connection.telebot_functional.known_users import check_known_users
+# from telebot_connection.telebot_functional.letters import check_word_letters
+# from telebot_connection.telebot_functional.add_word import get_word_info, count_words
+# # from telebot_connection.telebot_functional.add_word import count_words
+# from telebot_connection.telebot_functional.text import hello_text
+
+
+
+tele_functional = TelebotFunctional()
+
+
+class Command:
+    ADD_WORD = 'Добавить слово ➕'
+    DELETE_WORD = 'Удалить слово🔙'
+    NEXT = 'Дальше ⏭'
+
+class States(StatesGroup):
+    target_word = State()
+    translate_word = State()
+    another_words = State()
 
 
 def get_database(user_dict, repository):
@@ -62,7 +79,7 @@ def start_game_handler(bot: TeleBot, repository: object) -> None:
 
         known_users = get_known_users(repository=repository)
         if user_id not in known_users:
-            bot.send_message(user_id, hello_text())
+            bot.send_message(user_id, tele_functional.hello_text())
             get_database(user_dict=user_dict,
                          repository=repository)
 
@@ -75,13 +92,13 @@ def start_game_handler(bot: TeleBot, repository: object) -> None:
         user_database = get_user_words(repository=repository,
                                        user_id=user_id)
 
-        pos_database = get_random_pos_database(user_database)
+        pos_database = tele_functional.get_random_pos_database(user_database)
 
         target_word, translate, others, transcription, \
-            en_example, ru_example = get_random_words(pos_database)
+            en_example, ru_example = tele_functional.get_random_words(pos_database)
 
         global buttons
-        buttons, markup = setup_buttons(target_word, others)
+        buttons, markup = tele_functional.setup_buttons(target_word, others)
         chat_id = message.chat.id
 
         bot.send_message(chat_id,
@@ -116,7 +133,7 @@ def delete_word_handler(bot: TeleBot, repository: object) -> None:
 
         known_users = get_known_users(repository=repository)
         if message.from_user.id not in known_users:
-            bot.send_message(chat_id, hello_text())
+            bot.send_message(chat_id, tele_functional.hello_text())
             get_database(user_dict=user_dict,
                          repository=repository)
 
@@ -135,11 +152,11 @@ def delete_word_handler(bot: TeleBot, repository: object) -> None:
 
         user_en_word = message.text.lower()
 
-        if user_en_word not in get_button_states():
+        if user_en_word not in tele_functional.get_button_states():
 
             correct_letters = True
-            if not check_word_letters(user_en_word, eng_bool=True):
-                msg = show_hint(*[
+            if not tele_functional.check_word_letters(user_en_word, eng_bool=True):
+                msg = tele_functional.show_hint(*[
                     'Слово должно содержать только английские буквы.',
                     '',
                     'Пожалуйста, повторите попытку нажатием на кнопку',
@@ -166,7 +183,7 @@ def delete_word_handler(bot: TeleBot, repository: object) -> None:
                     msg = f'Слово "{user_en_word}" удалено'
                     bot.send_message(cid, msg)
 
-                    count_w = count_words(new_user_database)
+                    count_w = tele_functional.count_words(new_user_database)
                     msg = f'Текущее количество английских слов - {count_w} шт.'
                     bot.send_message(cid, msg)
 
@@ -201,10 +218,10 @@ def add_word_handler(bot: TeleBot, repository: object) -> None:
         cid = message.chat.id
         user_en_word = message.text.lower()
 
-        if user_en_word not in get_button_states():
+        if user_en_word not in tele_functional.get_button_states():
             if '❌' not in user_en_word:
 
-                check_word_bool = check_word_letters(user_en_word,
+                check_word_bool = tele_functional.check_word_letters(user_en_word,
                                                      eng_bool=True)
 
                 if check_word_bool:
@@ -220,7 +237,7 @@ def add_word_handler(bot: TeleBot, repository: object) -> None:
                     else:
 
                         try:
-                            new_word_info = get_word_info(add_en_word=user_en_word,
+                            new_word_info = tele_functional.get_word_info(add_en_word=user_en_word,
                                                           pos_list = ['noun', 'verb', 'adjective'],
                                                           os='win',
                                                           browser='chrome')
@@ -269,7 +286,10 @@ def add_word_handler(bot: TeleBot, repository: object) -> None:
                                                                user_id=message.from_user.id)
 
                             if len(user_database) != len(new_user_database):
-                                count_w = count_words(new_user_database)
+
+
+                                count_w = tele_functional.count_words(new_user_database)
+
                                 msg = f'Текущее количество английских слов - {count_w} шт.'
                                 bot.send_message(cid, msg)
 
@@ -277,7 +297,7 @@ def add_word_handler(bot: TeleBot, repository: object) -> None:
                     #     print(user_database)
 
                 else:
-                    msg = show_hint(*[
+                    msg = tele_functional.show_hint(*[
                         'Слово должно содержать только английские буквы.',
                         '',
                         'Пожалуйста, повторите попытку нажатием на кнопку',
@@ -302,7 +322,7 @@ def add_word_handler(bot: TeleBot, repository: object) -> None:
 
         # user_database = users_word_dict[cid]
 
-        check_word_bool = check_word_letters(user_ru_word,
+        check_word_bool = tele_functional.check_word_letters(user_ru_word,
                                              eng_bool=False)
 
         user_words = get_user_words(repository=repository,
@@ -327,7 +347,7 @@ def add_word_handler(bot: TeleBot, repository: object) -> None:
             new_user_database = get_user_words(repository=repository,
                                                user_id=message.from_user.id)
 
-            words_count = len(new_user_database)
+            words_count = tele_functional.count_words(new_user_database)
             msg = f'Текущее количество английских слов - {words_count} шт.'
             bot.send_message(cid, msg)
 
@@ -346,7 +366,7 @@ def add_word_handler(bot: TeleBot, repository: object) -> None:
 
             repository.delete_word(data_dict=data_dict)
 
-            msg = show_hint(*[
+            msg = tele_functional.show_hint(*[
                 'В этом случае я принимаю только русские буквы.',
                 '',
                 'Пожалуйста, повторите попытку нажатием на кнопку',
@@ -372,8 +392,8 @@ def reply_handler(bot: TeleBot) -> None:
                 target_word = data['target_word']
 
                 if text == target_word:
-                    hint = show_target(data)
-                    hint = show_hint(*["Отлично!❤", hint])
+                    hint = tele_functional.show_target(data)
+                    hint = tele_functional.show_hint(*["Отлично!❤", hint])
 
                 else:
                     for btn in buttons[:4]:
@@ -382,7 +402,7 @@ def reply_handler(bot: TeleBot) -> None:
                                 btn.text = text + '❌'
 
                             transl = data['translate_word']
-                            hint = show_hint("Допущена ошибка!",
+                            hint = tele_functional.show_hint("Допущена ошибка!",
                                              f"Попробуй ещё раз вспомнить слово 🇷🇺{transl}")
 
                             break
@@ -391,8 +411,8 @@ def reply_handler(bot: TeleBot) -> None:
             my_message = bot.send_message(message.chat.id, hint,
                                           reply_markup=markup)
 
-            get_mp3_audio(bot, data, hint, my_message)
-            get_example(bot, message, markup, data, hint)
+            tele_functional.get_mp3_audio(bot, data, hint, my_message)
+            tele_functional.get_example(bot, message, markup, data, hint)
 
         except (TypeError, KeyError, UnboundLocalError):
             pass

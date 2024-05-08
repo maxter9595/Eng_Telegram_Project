@@ -1,17 +1,157 @@
 import os
-import sys
+# import sys
 import re
+import time
+from typing import Optional
 
-import bs4
+# import bs4
 import requests
 from bs4 import BeautifulSoup
-from telebot import TeleBot
+from fake_headers import Headers
+# from telebot import TeleBot
 
-sys.path.insert(1, os.path.join(os.path.abspath(os.getcwd())))
-from data_formation.english_html import write_dir, get_headers
-from data_formation.english_mp3 import write_mp3
-from data_formation.translation_html import get_translation
-from telebot_connection.telebot_functional.cmd_state import get_button_states
+# sys.path.insert(1, os.path.join(os.path.abspath(os.getcwd())))
+# from data_formation.english_html import write_dir, get_headers
+# from data_formation.english_mp3 import write_mp3
+# from data_formation.translation_html import get_translation
+# from telebot_connection.telebot_functional.cmd_state import get_button_states
+
+
+
+
+def write_dir(*args) -> os.path:
+    abspath = os.path.abspath(args[0])
+    root_dir = ''
+
+    for arg in args[1:]:
+
+        if root_dir:
+            root_dir = os.path.join(root_dir, arg)
+
+        else:
+            root_dir = os.path.join(abspath, arg)
+
+    return root_dir
+
+def get_headers(os: str, browser: str) -> dict:
+    return Headers(os=os, browser=browser).generate()
+
+def write_mp3(url: str, file_path: str, os: str, browser: str,
+              attempts: int, error_timeout: int) -> bool:
+    attempt_count = 0
+    for _ in list(range(1, attempts + 1)):
+
+        if attempts >= attempt_count:
+
+            try:
+                headers = get_headers(os, browser)
+                resp = requests.get(url, headers=headers, timeout=10)
+                resp.raise_for_status()
+
+                with open(file_path, "wb") as fout:
+                    fout.write(resp.content)
+
+                return True
+
+            except (requests.exceptions.ConnectTimeout,
+                    requests.exceptions.ReadTimeout,
+                    requests.exceptions.ConnectionError):
+                print(f'requests.exceptions: не удалось обработать ссылку {url}')
+                time.sleep(error_timeout)
+
+        else:
+            return False
+
+def launch_get_requests(attempts: int, error_timeout: int,
+                        promt_link: str, my_word: str,
+                        os: str, browser: str) -> Optional[BeautifulSoup]:
+    attempt_count = 0
+    for _ in list(range(1, attempts + 1)):
+
+        if attempts >= attempt_count:
+
+            try:
+                resp = requests.get(promt_link + my_word, timeout=10,
+                                    headers=get_headers(os, browser))
+                soup = BeautifulSoup(resp.content, "lxml")
+                break
+
+            except (requests.exceptions.ConnectTimeout,
+                    requests.exceptions.ReadTimeout,
+                    requests.exceptions.ConnectionError):
+                print('requests.exceptions: повторная попытка...')
+                time.sleep(error_timeout)
+                attempt_count += 1
+
+        else:
+            return None
+
+    return soup
+
+
+def promt_site_parsing(soup: BeautifulSoup, my_word: str) -> dict:
+    dict_pos = {}
+    for item in soup.findAll("div", {"class": "cforms_result"}):
+        for item2 in item.findAll("div", attrs={'translation-item'}):
+
+            pos = item. \
+                find("span", attrs={"class": "ref_psp"}).text
+
+            word = item2. \
+                find('span', attrs={'class': 'result_only sayWord'}).text
+
+            try:
+                example_en = item2. \
+                    find('div', attrs={'class': 'samSource'}).text
+
+                example_ru = item2. \
+                    find('div', attrs={'class': 'samTranslation'}).text
+
+            except AttributeError:
+                example_en, example_ru = None, None
+
+            try:
+                trans = item. \
+                    find('span', attrs={'class': 'transcription'}).text
+
+            except AttributeError:
+                trans = None
+
+            if pos not in dict_pos:
+                dict_pos[pos] = [{
+                    'word': word,
+                    'transcription': trans,
+                    'example_en': example_en,
+                    'example_ru': example_ru
+                }]
+
+            else:
+                dict_pos[pos].append({
+                    'word': word,
+                    'transcription': trans,
+                    'example_en': example_en,
+                    'example_ru': example_ru
+                })
+
+    return {my_word: dict_pos}
+
+
+def get_translation(my_word: str, os: str, browser: str) -> Optional[dict]:
+    base_url = 'https://www.online-translator.com/'
+    promt_link = base_url + 'translation/english-russian/'
+
+    attempts = 3
+    error_timeout = 30
+
+    soup = launch_get_requests(attempts, error_timeout, promt_link,
+                               my_word, os, browser)
+
+    if not soup:
+        return None
+
+    else:
+        dict_info = promt_site_parsing(soup, my_word)
+        return dict_info
 
 
 # def form_db_dict(en_word:str, ru_word: str, en_trans:str='',
