@@ -1,28 +1,56 @@
 import datetime
 
 from psycopg2 import errors
-from sqlalchemy import create_engine, exc
+from sqlalchemy import create_engine, exc, Engine
 from sqlalchemy.orm import sessionmaker
-from database_formation.table_structure import Pos, Users, Words, UsersWords
+from database.structure import Pos, Users, Words, UsersWords
 
 
-class Repository:
+class DBRepository:
 
-    def __init__(self, dbname, user, password, host='localhost', port='5432'):
+    def __init__(self, dbname: str, user: str, password: str,
+                 host='localhost', port='5432'):
+
+        """
+        Инициируемые параметры класса:
+        - dbname: название базы данных
+        - user: логин пользователя Postgres
+        - password: пароль пользователя Postgres
+        - host: хост (по умолчанию localhost)
+        - port: порт (по умолчанию 5432)
+        """
+
         self.dbname = dbname
         self.user = user
         self.password = password
         self.host = host
         self.port = port
 
-    def get_engine(self):
+    def get_engine(self) -> Engine:
+
+        """
+        Запускает движок по DNS-ссылке. Запуск движка
+        позволяет начать взаимодействие с БД через ORM.
+
+        Выводной параметр:
+        - движок sqlalchemy
+        """
+
         dns_link = f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.dbname}"
         return create_engine(dns_link)
 
-    def add_pos(self, pos_name):
+    def add_pos(self, pos_name: str) -> None:
+
+        """
+        Добавляет новую часть речи в таблицу pos.
+
+        Вводной параметр:
+        - pos_name: наименование новой части речи
+        """
+
         engine = self.get_engine()
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        session_class = sessionmaker(bind=engine)
+        session = session_class()
 
         existing_pos = session.query(Pos). \
             filter_by(pos_name=pos_name). \
@@ -48,10 +76,20 @@ class Repository:
 
         session.close()
 
-    def update_pos(self, existing_pos_name, new_pos_name):
+    def update_pos(self, existing_pos_name: str,
+                   new_pos_name: str) -> None:
+
+        """
+        Обновляет существующую часть речи в таблице pos.
+
+        Вводные параметры:
+        - existing_pos_name: наименование существующей части речи
+        - existing_pos_name: новое наименование для существующей части речи
+        """
+
         engine = self.get_engine()
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        session_class = sessionmaker(bind=engine)
+        session = session_class()
 
         existing_pos = session.query(Pos). \
             filter_by(pos_name=existing_pos_name). \
@@ -69,10 +107,18 @@ class Repository:
 
         session.close()
 
-    def delete_pos(self, pos_name):
+    def delete_pos(self, pos_name: str) -> None:
+
+        """
+        Удаляет часть речи из таблицы pos.
+
+        Вводной параметр:
+        - pos_name: наименование части речи, которую хотим удалить
+        """
+
         engine = self.get_engine()
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        session_class = sessionmaker(bind=engine)
+        session = session_class()
 
         existing_pos = session.query(Pos). \
             filter_by(pos_name=pos_name). \
@@ -84,10 +130,18 @@ class Repository:
 
         session.close()
 
-    def get_pos(self):
+    def get_pos(self) -> list[dict]:
+
+        """
+        Позволяет получить часть речи из таблицы pos.
+
+        Выводной параметр:
+        - список словарей, содержащий данные таблицы pos
+        """
+
         engine = self.get_engine()
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        session_class = sessionmaker(bind=engine)
+        session = session_class()
 
         existing_pos = session.query(Pos).all()
         session.close()
@@ -103,7 +157,19 @@ class Repository:
         else:
             return []
 
-    def add_word(self, data_dict, is_added_by_users):
+    def add_word(self, data_dict: dict,
+                 is_added_by_users: bool) -> None:
+
+        """
+        Добавляет новое слово в таблицу words.
+
+        Вводные параметры:
+        - data_dict: словарь с данными по английскому слову
+        - is_added_by_users: факт добавления слова пользователями
+            -- True: слово добавлено пользователем
+            -- False: слово добавлено разработчиком
+        """
+
         pos_list = self.get_pos()
         pos_name = data_dict.get('pos_name')
 
@@ -123,8 +189,8 @@ class Repository:
                 ru_example = data_dict.get('ru_example')
 
                 engine = self.get_engine()
-                Session = sessionmaker(bind=engine)
-                session = Session()
+                session_class = sessionmaker(bind=engine)
+                session = session_class()
 
                 existing_word = session.query(Words). \
                     filter_by(en_word=en_word, id_pos=id_pos). \
@@ -166,7 +232,15 @@ class Repository:
 
                 session.close()
 
-    def delete_word(self, data_dict):
+    def delete_word(self, data_dict: dict) -> None:
+
+        """
+        Удаляет слово из таблицы words.
+
+        Вводной параметр:
+        - data_dict: словарь с данными по английскому слову
+        """
+
         pos_list = self.get_pos()
         pos_name = data_dict.get('pos_name')
 
@@ -181,8 +255,8 @@ class Repository:
                 en_word = data_dict.get('en_word')
 
                 engine = self.get_engine()
-                Session = sessionmaker(bind=engine)
-                session = Session()
+                session_class = sessionmaker(bind=engine)
+                session = session_class()
 
                 existing_word = session.query(Words). \
                     filter_by(en_word=en_word,
@@ -195,10 +269,26 @@ class Repository:
 
                 session.close()
 
-    def get_words(self, en_word=None, is_added_by_users=False):
+    def get_words(self, en_word: str = None,
+                  is_added_by_users: bool = False) -> list[dict]:
+
+        """
+        Позволяет получить слова из таблицы words.
+        По умолчанию выводятся все слова из данной таблицы.
+
+        Вводные параметры:
+        - en_word: слово, которое хотим получить методом фильтрации
+        - is_added_by_users: факт добавления слова пользователями
+            -- True: слово добавлено пользователем
+            -- False: слово добавлено разработчиком
+
+        Выводной параметр:
+        - список словарей с данными по английским словам
+        """
+
         engine = self.get_engine()
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        session_class = sessionmaker(bind=engine)
+        session = session_class()
 
         if not en_word:
             existing_words = session.query(Words). \
@@ -230,15 +320,23 @@ class Repository:
         else:
             return []
 
-    def add_user(self, user_dict):
+    def add_user(self, user_dict: dict) -> None:
+
+        """
+        Добавляет нового пользователя в таблицу users.
+
+        Вводной параметр:
+        - user_dict: словарь с данными относительно пользователя
+        """
+
         user_id = user_dict.get('user_id')
         first_name = user_dict.get('first_name')
         last_name = user_dict.get('last_name')
         username = user_dict.get('username')
 
         engine = self.get_engine()
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        session_class = sessionmaker(bind=engine)
+        session = session_class()
 
         existing_user = session.query(Users). \
             filter_by(user_id=user_id). \
@@ -262,10 +360,18 @@ class Repository:
 
         session.close()
 
-    def delete_user(self, user_id):
+    def delete_user(self, user_id: int) -> None:
+
+        """
+        Удаляет пользователя из таблицы users.
+
+        Вводной параметр:
+        - user_id: Telegram ID пользователя
+        """
+
         engine = self.get_engine()
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        session_class = sessionmaker(bind=engine)
+        session = session_class()
 
         existing_user = session.query(Users). \
             filter_by(user_id=user_id). \
@@ -277,10 +383,23 @@ class Repository:
 
         session.close()
 
-    def get_users(self, user_id=None):
+    def get_users(self, user_id: int = None) -> list[dict]:
+
+        """
+        Позволяет получить информацию относительно
+        пользователей приложения. По умолчанию
+        выводятся все пользователи.
+
+        Вводной параметр:
+        - user_id: Telegram ID пользователя
+
+        Выводной параметр:
+        - список словарей с данными таблицы users
+        """
+
         engine = self.get_engine()
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        session_class = sessionmaker(bind=engine)
+        session = session_class()
 
         if not user_id:
             existing_users = session.query(Users). \
@@ -305,10 +424,15 @@ class Repository:
         else:
             return []
 
-    def prepare_user_word_pairs(self, user_id):
-        engine = self.get_engine()
-        Session = sessionmaker(bind=engine)
-        session = Session()
+    def prepare_user_word_pairs(self, user_id: int) -> None:
+
+        """
+        Позволяет связать пользователя со словами из
+        csv-файла database.csv.
+
+        Вводной параметр:
+        - user_id: Telegram ID пользователя
+        """
 
         word_data = self.get_words()
         user_data = self.get_users(user_id=user_id)
@@ -323,8 +447,8 @@ class Repository:
             user_id += user_data.pop().get('user_id')
 
         engine = self.get_engine()
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        session_class = sessionmaker(bind=engine)
+        session = session_class()
 
         existing_user = session.query(UsersWords). \
             filter_by(user_id=user_id). \
@@ -335,8 +459,8 @@ class Repository:
         if not existing_user and words_id and user_id:
 
             engine = self.get_engine()
-            Session = sessionmaker(bind=engine)
-            session = Session()
+            session_class = sessionmaker(bind=engine)
+            session = session_class()
 
             last_user_word_pair = session.query(UsersWords). \
                 order_by(UsersWords.id.desc()). \
@@ -364,8 +488,8 @@ class Repository:
                 )
 
             engine = self.get_engine()
-            Session = sessionmaker(bind=engine)
-            session = Session()
+            session_class = sessionmaker(bind=engine)
+            session = session_class()
 
             try:
                 session.bulk_save_objects(object_list)
@@ -375,7 +499,21 @@ class Repository:
 
             session.close()
 
-    def add_user_word(self, user_id, data_dict):
+    def add_user_word(self, user_id: int,
+                      data_dict: dict) -> None:
+
+        """
+        1. Добавляет новую пару "пользователь-слово"
+           в таблицу users_words.
+        2. Осуществляет добавление удаленного ранее слова
+           (т.е. если раньше слово имело is_added=False,
+           то после обработки появится is_added=True)
+
+        Вводной параметр:
+        - user_id: Telegram ID пользователя
+        - data_dict: словарь с данными по английскому слову
+        """
+
         word_data = self.get_words(en_word=data_dict.get('en_word'))
         user_data = self.get_users(user_id=user_id)
 
@@ -397,8 +535,8 @@ class Repository:
             if words_id:
 
                 engine = self.get_engine()
-                Session = sessionmaker(bind=engine)
-                session = Session()
+                session_class = sessionmaker(bind=engine)
+                session = session_class()
 
                 last_user_word_pair = session.query(UsersWords). \
                     order_by(UsersWords.id.desc()). \
@@ -414,8 +552,8 @@ class Repository:
                 object_list = []
                 for idx, word_id in enumerate(words_id):
                     engine = self.get_engine()
-                    Session = sessionmaker(bind=engine)
-                    session = Session()
+                    session_class = sessionmaker(bind=engine)
+                    session = session_class()
 
                     existing_word_user_pair = session.query(UsersWords). \
                         filter_by(user_id=user_id, word_id=word_id). \
@@ -445,19 +583,29 @@ class Repository:
 
                 if object_list:
                     engine = self.get_engine()
-                    Session = sessionmaker(bind=engine)
-                    session = Session()
+                    session_class = sessionmaker(bind=engine)
+                    session = session_class()
 
                     try:
                         session.bulk_save_objects(object_list)
                         session.commit()
                     except (exc.IntegrityError, errors.UniqueViolation) as e:
-                        print(e)
                         pass
 
                     session.close()
 
-    def remove_user_word(self, user_id, en_word):
+    def remove_user_word(self, user_id: int,
+                         en_word: str) -> None:
+
+        """
+        Делает неактивным слово из пары "пользователь-слово",
+        находящейся внутри таблицы users_words.
+
+        Вводной параметр:
+        - user_id: Telegram ID пользователя
+        - en_word: английское слово, которое не понравилось пользователю
+        """
+
         word_data1 = self.get_words(en_word, is_added_by_users=False)
         word_data2 = self.get_words(en_word, is_added_by_users=True)
         word_data = word_data1 + word_data2
@@ -467,8 +615,8 @@ class Repository:
                 word_id = dict_data.get('id')
 
                 engine = self.get_engine()
-                Session = sessionmaker(bind=engine)
-                session = Session()
+                session_class = sessionmaker(bind=engine)
+                session = session_class()
 
                 existing_word_user_pair = session.query(UsersWords). \
                     filter_by(user_id=user_id, word_id=word_id, is_added=True). \
@@ -482,7 +630,18 @@ class Repository:
 
                 session.close()
 
-    def delete_user_word_pair(self, user_id, en_word):
+    def delete_user_word_pair(self, user_id: int,
+                              en_word: str) -> None:
+
+        """
+        Удаляет пару "пользователь-слово" из таблицы users_words.
+
+        Вводной параметр:
+        - user_id: Telegram ID пользователя
+        - en_word: английское слово, требующее удаление из таблицы
+                   users_words в рамках конкретного пользователя
+        """
+
         word_data1 = self.get_words(en_word, is_added_by_users=False)
         word_data2 = self.get_words(en_word, is_added_by_users=True)
         word_data = word_data1 + word_data2
@@ -492,8 +651,8 @@ class Repository:
                 word_id = dict_data.get('id')
 
                 engine = self.get_engine()
-                Session = sessionmaker(bind=engine)
-                session = Session()
+                session_class = sessionmaker(bind=engine)
+                session = session_class()
 
                 existing_word_user_pair = session.query(UsersWords). \
                     filter_by(user_id=user_id, word_id=word_id). \
@@ -505,46 +664,44 @@ class Repository:
 
                 session.close()
 
-    # def remove_user_word(self, user_id, en_word):
-    #     word_data1 = self.get_words(en_word, is_added_by_users=False)
-    #     word_data2 = self.get_words(en_word, is_added_by_users=True)
-    #     word_data = word_data1 + word_data2
-    #
-    #     if word_data:
-    #         for dict_data in word_data:
-    #             word_id = dict_data.get('id')
-    #
-    #             engine = self.get_engine()
-    #             Session = sessionmaker(bind=engine)
-    #             session = Session()
-    #
-    #             existing_word_user_pair = session.query(UsersWords). \
-    #                 filter_by(user_id=user_id, word_id=word_id, is_added=True). \
-    #                 first()
-    #
-    #             if existing_word_user_pair:
-    #                 existing_word_user_pair.is_added = False
-    #                 existing_word_user_pair.date_added = None
-    #                 existing_word_user_pair.date_deleted = datetime.datetime.now()
-    #                 session.commit()
-    #
-    #             session.close()
+    def get_user_words(self, user_id: int, pos_name: str = None) -> list[dict]:
 
+        """
+        Позволяет получить все английские слова, находящиеся
+        в базе данных пользователя и не имеющих is_added=False
+        внутри таблицы users_words.
 
+        Вводной параметр:
+        - user_id: Telegram ID пользователя
+        - pos_name: наименование части речи (по умолчанию None)
 
+        Выводной параметр;
+        - список словарей с данными таблицы users_words
+        """
 
-
-    def get_user_words(self, user_id):
         engine = self.get_engine()
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        session_class = sessionmaker(bind=engine)
+        session = session_class()
 
-        query_result = session.query(Words, UsersWords, Users, Pos). \
-            join(UsersWords, UsersWords.word_id == Words.id). \
-            join(Users, Users.user_id == UsersWords.user_id). \
-            join(Pos, Pos.id == Words.id_pos). \
-            filter(UsersWords.user_id == user_id, UsersWords.is_added == True). \
-            all()
+        if pos_name is None:
+            query_result = session.query(Words, UsersWords, Users, Pos). \
+                join(UsersWords, UsersWords.word_id == Words.id). \
+                join(Users, Users.user_id == UsersWords.user_id). \
+                join(Pos, Pos.id == Words.id_pos). \
+                filter(UsersWords.user_id == user_id,
+                       UsersWords.is_added == True). \
+                all()
+        else:
+            query_result = session.query(Words, UsersWords, Users, Pos). \
+                join(UsersWords, UsersWords.word_id == Words.id). \
+                join(Users, Users.user_id == UsersWords.user_id). \
+                join(Pos, Pos.id == Words.id_pos). \
+                filter(UsersWords.user_id == user_id,
+                       UsersWords.is_added == True,
+                       Pos.pos_name == pos_name). \
+                all()
+
+        session.close()
 
         if query_result:
             user_words_list = []
@@ -561,50 +718,3 @@ class Repository:
             return user_words_list
         else:
             return []
-
-
-
-
-
-if __name__ == '__main__':
-    rep = Repository(dbname='test_db4',
-                     user='postgres',
-                     password='postgres')
-
-    # user_dict = {
-    #     'user_id': 111111,
-    #     'first_name': 'Max',
-    #     'last_name': 'Telet',
-    #     'username': 'wkeokmoem'
-    # }
-    #
-    # user_dict2 = {
-    #     'user_id': 1111112,
-    #     'first_name': 'Max2',
-    #     'last_name': 'Telet2',
-    #     'username': 'wkeokmoem2'
-    # }
-    #
-    # rep.add_user(user_dict)
-    # rep.add_user(user_dict2)
-    #
-    # rep.prepare_user_word_pairs(111111)
-    # rep.prepare_user_word_pairs(1111112)
-    #
-    # rep.prepare_user_word_pairs(111113313)
-    #
-    # data_dict = {
-    #     'en_word': 'new word',
-    #     'en_trans': 'trans1010101',
-    #     'mp_3_url': 'mp1010101',
-    #     'pos_name': 'noun',
-    #     'ru_word': 'ru_word1010101',
-    #     'en_example': 'en_example1010101',
-    #     'ru_example': 'ru_example1010101'
-    # }
-    #
-    # rep.add_user_word(user_id=111111, data_dict=data_dict)
-    # rep.add_user_word(user_id=1111112, data_dict=data_dict)
-    #
-    # rep.remove_user_word(user_id=1111112, en_word='new word')
-    # print(rep.get_user_words(1111112))
