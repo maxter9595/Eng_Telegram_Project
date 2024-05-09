@@ -48,7 +48,7 @@ if __name__ == '__main__':
     DB_NAME = 'test_TGbot5'
     USER = 'postgres'
     PASSWORD = 'postgres'
-    TOKEN = '7076512254:AAHwldFRsqwr3rAdEiCEOmSF-zoFFIjFtO4'
+    TOKEN = ''
 
     main_function(
         dbname=DB_NAME,
