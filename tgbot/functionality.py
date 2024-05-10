@@ -186,14 +186,18 @@ class Functionality:
         """
 
         if eng_bool:
-            allowed_letters = ascii_letters
+            letter_condition = lambda letter:\
+                letter in ascii_letters
         else:
-            allowed_letters = '[а-яА-ЯёЁ]'
+            letter_condition = lambda letter:\
+                re.match('[а-яА-ЯёЁ]', letter)
 
         for letter in word:
-            if not letter.isalpha() or not re.match(allowed_letters, letter):
+            if letter.isalpha() and\
+                    letter_condition(letter):
+                continue
+            else:
                 return False
-
         return True
 
     def get_random_words(self, pos_database: list) -> Optional[tuple]:

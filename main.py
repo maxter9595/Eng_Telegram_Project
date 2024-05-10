@@ -1,6 +1,6 @@
 from database.creation import DBCreation
 from database.repository import DBRepository
-from telebot_connection.connection import connect_telebot
+from tgbot.connection import connect_telebot
 
 
 def main_function(dbname: str, user: str,
@@ -45,7 +45,7 @@ def main_function(dbname: str, user: str,
 
 if __name__ == '__main__':
 
-    DB_NAME = 'test_TGbot5'
+    DB_NAME = 'EngStudyBot1'
     USER = 'postgres'
     PASSWORD = 'postgres'
     TOKEN = '7076512254:AAHwldFRsqwr3rAdEiCEOmSF-zoFFIjFtO4'

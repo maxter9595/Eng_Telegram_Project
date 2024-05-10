@@ -4,8 +4,9 @@ from telebot.storage import StateMemoryStorage
 from telebot import types, TeleBot, custom_filters
 
 from database.repository import DBRepository
-from telebot_connection.parsing import Parsing
-from telebot_connection.functionality import Functionality, Command, States
+from tgbot.parsing import Parsing
+from tgbot.functionality import Functionality, Command, States
+
 
 parsing = Parsing()
 functionality = Functionality()
@@ -162,13 +163,13 @@ def delete_word_handler(bot: TeleBot, repository: DBRepository) -> None:
                         text=f'Слово "{user_en_word}" удалено'
                     )
 
-                    count_unique_words = len(set([
-                        word_dict.get('en_word') for word_dict in new_user_database
-                    ]))
+                    unique_words = repository.get_unique_user_words(
+                        user_id=user_id
+                    )
 
                     bot.send_message(
                         chat_id=cid,
-                        text=f'Текущее количество английских слов - {count_unique_words} шт.'
+                        text=f'Текущее количество английских слов - {len(unique_words)} шт.'
                     )
 
         else:
@@ -222,9 +223,9 @@ def add_word_handler(bot: TeleBot, repository: DBRepository) -> None:
                         user_id=user_id
                     )
 
-                    existing_words = list(set([
-                        dict_.get('en_word') for dict_ in user_database
-                    ]))
+                    existing_words = repository.get_unique_user_words(
+                        user_id=user_id
+                    )
 
                     if user_en_word in existing_words:
                         bot.send_message(
@@ -241,9 +242,12 @@ def add_word_handler(bot: TeleBot, repository: DBRepository) -> None:
                         )
 
                         if new_word_info[0].get('ru_word') is None:
+                            data_dict = new_word_info.pop()
+                            data_dict['ru_word'] = ''
+
                             repository.add_user_word(
                                 user_id=user_id,
-                                data_dict=new_word_info.pop()
+                                data_dict=data_dict
                             )
 
                             send_msg = bot.send_message(
@@ -259,22 +263,22 @@ def add_word_handler(bot: TeleBot, repository: DBRepository) -> None:
                         else:
                             for word_dict in new_word_info:
                                 repository.add_user_word(
-                                    user_id=message.from_user.id,
+                                    user_id=user_id,
                                     data_dict=word_dict
                                 )
 
                             new_user_database = repository.get_user_words(
-                                user_id=message.from_user.id
+                                user_id=user_id
                             )
 
                             if len(user_database) != len(new_user_database):
-                                count_unique_words = len(set([
-                                    word_dict.get('en_word') for word_dict in new_user_database
-                                ]))
+                                unique_words = repository.get_unique_user_words(
+                                    user_id=user_id
+                                )
 
                                 bot.send_message(
                                     chat_id=cid,
-                                    text=f'Текущее количество английских слов - {count_unique_words} шт.'
+                                    text=f'Текущее количество английских слов - {len(unique_words)} шт.'
                                 )
 
                 else:
@@ -311,8 +315,10 @@ def add_word_handler(bot: TeleBot, repository: DBRepository) -> None:
             user_id=user_id
         )
 
+        last_en_word = user_database[-1].get('en_word')
+
         data_dict = {
-            'en_word': user_database[-1].get('en_word'),
+            'en_word': last_en_word,
             'en_trans': '',
             'mp_3_url': '',
             'pos_name': 'unidentified',
@@ -332,24 +338,19 @@ def add_word_handler(bot: TeleBot, repository: DBRepository) -> None:
                 data_dict=data_dict
             )
 
-            new_user_database = repository.get_user_words(
+            unique_words = repository.get_unique_user_words(
                 user_id=user_id
             )
 
-            if len(user_database) != len(new_user_database):
-                count_unique_words = len(set([
-                    word_dict.get('en_word') for word_dict in new_user_database
-                ]))
-
-                bot.send_message(
-                    chat_id=cid,
-                    text=f'Текущее количество английских слов - {count_unique_words} шт.'
-                )
+            bot.send_message(
+                chat_id=cid,
+                text=f'Текущее количество английских слов - {len(unique_words)} шт.'
+            )
 
         else:
             repository.delete_user_word_pair(
                 user_id=message.from_user.id,
-                en_word=user_database[-1].get('en_word')
+                en_word=last_en_word
             )
 
             repository.delete_word(

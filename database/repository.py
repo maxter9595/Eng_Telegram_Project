@@ -667,7 +667,7 @@ class DBRepository:
     def get_user_words(self, user_id: int, pos_name: str = None) -> list[dict]:
 
         """
-        Позволяет получить все английские слова, находящиеся
+        Позволяет получить ВСЕ английские слова, находящиеся
         в базе данных пользователя и не имеющих is_added=False
         внутри таблицы users_words.
 
@@ -684,18 +684,16 @@ class DBRepository:
         session = session_class()
 
         if pos_name is None:
-            query_result = session.query(Words, UsersWords, Users, Pos). \
-                join(UsersWords, UsersWords.word_id == Words.id). \
-                join(Users, Users.user_id == UsersWords.user_id). \
+            query_result = session.query(Words, Pos, UsersWords). \
                 join(Pos, Pos.id == Words.id_pos). \
+                join(UsersWords, UsersWords.word_id == Words.id). \
                 filter(UsersWords.user_id == user_id,
                        UsersWords.is_added == True). \
                 all()
         else:
-            query_result = session.query(Words, UsersWords, Users, Pos). \
-                join(UsersWords, UsersWords.word_id == Words.id). \
-                join(Users, Users.user_id == UsersWords.user_id). \
+            query_result = session.query(Words, Pos, UsersWords). \
                 join(Pos, Pos.id == Words.id_pos). \
+                join(UsersWords, UsersWords.word_id == Words.id). \
                 filter(UsersWords.user_id == user_id,
                        UsersWords.is_added == True,
                        Pos.pos_name == pos_name). \
@@ -705,7 +703,7 @@ class DBRepository:
 
         if query_result:
             user_words_list = []
-            for word, user_word, user, pos in query_result:
+            for word, pos, _ in query_result:
                 user_words_list.append({
                     'en_word': word.en_word,
                     'en_trans': word.en_trans,
@@ -718,3 +716,49 @@ class DBRepository:
             return user_words_list
         else:
             return []
+
+    def get_unique_user_words(self, user_id: int) -> list:
+
+        """
+        Выводит УНИКАЛЬНЫЕ английские слова пользователя.
+
+        Вводной параметр:
+        - user_id: Telegram ID пользователя
+
+        Выводной параметр;
+        - список с уникальными английскими словами пользователя
+        """
+        engine = self.get_engine()
+        session_class = sessionmaker(bind = engine)
+        session = session_class()
+
+        query_result = session.query(Words, UsersWords).\
+            join(UsersWords, UsersWords.word_id == Words.id). \
+            filter(UsersWords.user_id == user_id,
+                   UsersWords.is_added == True).\
+            all()
+
+        session.close()
+
+        if query_result:
+            word_id = []
+            for _, word in query_result:
+                word_id.append(word.id)
+
+            engine = self.get_engine()
+            session_class = sessionmaker(bind=engine)
+            session = session_class()
+
+            unique_english_words = session.query(Words.en_word).\
+                filter(Words.id.in_(word_id)).\
+                distinct().\
+                all()
+
+            session.close()
+
+            if unique_english_words:
+                unique_words = []
+                for word in unique_english_words:
+                    unique_words.append(word.en_word)
+
+                return unique_words
