@@ -177,7 +177,6 @@ def delete_word_handler(bot: TeleBot, repository: DBRepository) -> None:
                 chat_id=cid,
                 text=functionality.show_hint(*[
                     'Я принимаю только слова.',
-                    '',
                     f'Команда {user_en_word} в расчет не берется.'])
             )
 
@@ -302,7 +301,6 @@ def add_word_handler(bot: TeleBot, repository: DBRepository) -> None:
                 chat_id=cid,
                 text=functionality.show_hint(*[
                     'Я принимаю только слова.',
-                    '',
                     f'Команда {user_en_word} в расчет не берется.'])
             )
 

@@ -45,7 +45,7 @@ def main_function(dbname: str, user: str,
 
 if __name__ == '__main__':
 
-    DB_NAME = 'EngStudyBot1'
+    DB_NAME = 'EngStudyBot'
     USER = 'postgres'
     PASSWORD = 'postgres'
     TOKEN = '7076512254:AAHwldFRsqwr3rAdEiCEOmSF-zoFFIjFtO4'
